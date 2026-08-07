@@ -168,6 +168,28 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
   <div class="card-full">
     <div class="card-header">
       <div>
+        <div class="ct">📋 年度 總表（合計）</div>
+        <div class="cs" id="summary-tot-cs">各年度所選月份合計 · 可篩選年度、月份、品項與單位（可複選數量／金額／媒體費）</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="ctrl">
+          <span class="ctrl-lbl">年度</span>
+          <div class="mini-ctrl" id="summary-tot-yr-bar"></div>
+        </div>
+        <div class="ctrl">
+          <span class="ctrl-lbl">月份</span>
+          <div class="mini-ctrl" id="summary-tot-month-bar"></div>
+        </div>
+        <div class="mini-ctrl" id="summary-tot-metric-bar"></div>
+        <div class="tbar" id="summary-tot-sku-bar" style="margin-bottom:0"></div>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr id="summary-tot-tbl-head"></tr></thead><tbody id="summary-tot-tbl-body"></tbody></table></div>
+  </div>
+
+  <div class="card-full">
+    <div class="card-header">
+      <div>
         <div class="ct">📋 年度 × 月份 總表</div>
         <div class="cs" id="summary-cs">各年度 1–12 月銷售數量 · 可篩選品項與單位</div>
       </div>
@@ -185,7 +207,26 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
       </div>
     </div>
     <div class="tbl-wrap"><table><thead><tr id="summary-tbl-head"></tr></thead><tbody id="summary-tbl-body"></tbody></table></div>
+    <hr class="div">
+    <div class="card-header">
+      <div>
+        <div class="ct" style="font-size:12px">📡 媒體費（by 月 · by 年）</div>
+        <div class="cs">獨立篩選年度、月份 · 媒體費為 MUHI 品牌總投放（不受品項篩選影響）</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="ctrl">
+          <span class="ctrl-lbl">年度</span>
+          <div class="mini-ctrl" id="summary-media-yr-bar"></div>
+        </div>
+        <div class="ctrl">
+          <span class="ctrl-lbl">月份</span>
+          <div class="mini-ctrl" id="summary-media-month-bar"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr id="summary-tbl-media-head"></tr></thead><tbody id="summary-tbl-media-body"></tbody></table></div>
   </div>
+
 
   <div class="card-full">
     <div class="card-header">
@@ -634,6 +675,12 @@ let S={
   summaryMetric:'qty',  // year x month summary table unit filter: qty/amt
   summaryMonths:{1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true,9:true,10:true,11:true,12:true},  // multi-select month filter
   summaryTblYears:{2017:true,2018:true,2019:true,2020:true,2021:true,2022:true,2023:true,2024:true,2025:true,2026:true},  // year x month table: multi-select year filter (rows)
+  summaryMediaYears:{2017:true,2018:true,2019:true,2020:true,2021:true,2022:true,2023:true,2024:true,2025:true,2026:true},  // media by-month-by-year table: multi-select year filter (rows)
+  summaryMediaMonths:{1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true,9:true,10:true,11:true,12:true},  // media by-month-by-year table: multi-select month filter
+  summaryTotYears:{2017:true,2018:true,2019:true,2020:true,2021:true,2022:true,2023:true,2024:true,2025:true,2026:true},  // year-total table: multi-select year filter (rows)
+  summaryTotMonths:{1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true,9:true,10:true,11:true,12:true},  // year-total table: multi-select month filter
+  summaryTotSku:'ALL',  // year-total table: product filter
+  summaryTotMetrics:{qty:true,amt:false,media:false},  // year-total table: multi-select qty/amt/media
   summaryChartYears:{2017:false,2018:false,2019:false,2020:false,2021:false,2022:false,2023:false,2024:false,2025:false,2026:true},  // year x month chart: multi-select year filter
   summaryChartQty:true, summaryChartAmt:true, summaryChartMedia:true,  // year x month chart: series visibility toggles
   summarySingleYear:2026,  // single-year by-month chart: selected year
@@ -1575,6 +1622,137 @@ function initSummaryTblYearBar(){
   };
   el.appendChild(bt);
 }
+
+// ════════════════════════════════════
+// YEAR TOTAL TABLE (new card: year-level totals only, no month columns)
+// ════════════════════════════════════
+function initSummaryTotYearBar(){
+  const el=document.getElementById('summary-tot-yr-bar');if(!el)return;
+  el.innerHTML='';
+  YEARS.forEach(y=>{
+    const b=document.createElement('button');
+    b.className='mini-btn'+(S.summaryTotYears[y]?' on':'');
+    b.textContent=y;
+    b.onclick=()=>{
+      const active=YEARS.filter(x=>S.summaryTotYears[x]);
+      if(S.summaryTotYears[y]&&active.length===1)return;  // keep at least 1 selected
+      S.summaryTotYears[y]=!S.summaryTotYears[y];
+      initSummaryTotYearBar();renderSummaryTotTable();
+    };
+    el.appendChild(b);
+  });
+  const sep=document.createElement('span');sep.className='vsep';el.appendChild(sep);
+  const allOn=YEARS.every(y=>S.summaryTotYears[y]);
+  const bt=document.createElement('button');
+  bt.className='mini-btn'+(allOn?' on':'');
+  bt.textContent='全選';
+  bt.onclick=()=>{
+    YEARS.forEach(y=>S.summaryTotYears[y]=true);
+    initSummaryTotYearBar();renderSummaryTotTable();
+  };
+  el.appendChild(bt);
+}
+function initSummaryTotMonthBar(){
+  const el=document.getElementById('summary-tot-month-bar');if(!el)return;
+  el.innerHTML='';
+  wR(1,12).forEach(m=>{
+    const b=document.createElement('button');
+    b.className='mini-btn'+(S.summaryTotMonths[m]?' on':'');
+    b.textContent=m+'月';
+    b.onclick=()=>{
+      const active=wR(1,12).filter(x=>S.summaryTotMonths[x]);
+      if(S.summaryTotMonths[m]&&active.length===1)return;  // keep at least 1 selected
+      S.summaryTotMonths[m]=!S.summaryTotMonths[m];
+      initSummaryTotMonthBar();renderSummaryTotTable();
+    };
+    el.appendChild(b);
+  });
+  const sep=document.createElement('span');sep.className='vsep';el.appendChild(sep);
+  const allOn=wR(1,12).every(m=>S.summaryTotMonths[m]);
+  const bt=document.createElement('button');
+  bt.className='mini-btn'+(allOn?' on':'');
+  bt.textContent='全選';
+  bt.onclick=()=>{
+    wR(1,12).forEach(m=>S.summaryTotMonths[m]=true);
+    initSummaryTotMonthBar();renderSummaryTotTable();
+  };
+  el.appendChild(bt);
+}
+function initSummaryTotSkuBtns(){
+  const el=document.getElementById('summary-tot-sku-bar');if(!el)return;
+  el.innerHTML='';
+  const opts=[{k:'ALL',l:'全部',c:'#ffd166'},...SKUS.map(s=>({k:s,l:SKU_L[s],c:SKU_C[s]}))];
+  opts.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='sku-btn'+(S.summaryTotSku===o.k?'':' off');
+    b.style.borderColor=o.c;b.style.color=o.c;
+    b.innerHTML=`<span class="dot" style="background:${o.c}"></span>${o.l}`;
+    b.onclick=()=>{S.summaryTotSku=o.k;initSummaryTotSkuBtns();renderSummaryTotTable();};
+    el.appendChild(b);
+  });
+}
+const TOT_METRICS=[{k:'qty',l:'POS銷售瓶數'},{k:'amt',l:'POS銷售金額'},{k:'media',l:'媒體費'}];
+function initSummaryTotMetricBtns(){
+  const el=document.getElementById('summary-tot-metric-bar');if(!el)return;
+  el.innerHTML='';
+  TOT_METRICS.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='mini-btn'+(S.summaryTotMetrics[o.k]?' on':'');
+    b.textContent=o.l;
+    b.onclick=()=>{
+      const active=TOT_METRICS.filter(x=>S.summaryTotMetrics[x.k]);
+      if(S.summaryTotMetrics[o.k]&&active.length===1)return;  // keep at least 1 selected
+      S.summaryTotMetrics[o.k]=!S.summaryTotMetrics[o.k];
+      initSummaryTotMetricBtns();renderSummaryTotTable();
+    };
+    el.appendChild(b);
+  });
+}
+function renderSummaryTotTable(){
+  const head=document.getElementById('summary-tot-tbl-head');
+  const body=document.getElementById('summary-tot-tbl-body');
+  const cs=document.getElementById('summary-tot-cs');
+  if(!head||!body)return;
+  const activeMetrics=TOT_METRICS.filter(o=>S.summaryTotMetrics[o.k]);
+  const months=wR(1,12).filter(m=>S.summaryTotMonths[m]);
+  const monthFiltered=months.length<12;
+  const metricLbls=activeMetrics.map(o=>o.l).join('／');
+  const hasMedia=activeMetrics.some(o=>o.k==='media');
+  const hasSales=activeMetrics.some(o=>o.k!=='media');
+  if(cs)cs.textContent=`各年度${monthFiltered?` ${months.join('、')}月`:' 1–12 月'}${metricLbls}合計 · 可篩選年度、月份${hasSales?'、品項':''} · 只顯示年度合計，不列出月份明細${hasMedia?'（媒體費為 MUHI 品牌總投放，不受品項篩選影響）':''}`;
+  head.innerHTML='<th>年度</th>'+activeMetrics.map(o=>`<th class="num nhi">${o.l}合計</th><th class="num nhi">${o.l}較前一年</th>`).join('');
+  const skuList=S.summaryTotSku==='ALL'?SKUS:[S.summaryTotSku];
+  const yearTotals={};
+  YEARS.forEach(y=>{
+    const vals={qty:0,amt:0,media:0};
+    months.forEach(m=>{
+      skuList.forEach(s=>{
+        const d=gPosMo(s,y,String(m));
+        if(d){vals.qty+=d.q;vals.amt+=d.a;}
+      });
+      const md=gMediaMo('MUHI',y,String(m));if(md)vals.media+=md.tot;
+    });
+    yearTotals[y]=vals;
+  });
+  const yoyTd=(cur,prev)=>{
+    if(!prev||cur===0)return`<td class="num" style="color:var(--text3)">—</td>`;
+    const g=(cur-prev)/prev*100;
+    const cls=g>=0?'dn':'up';  // red=成長, green=下滑（台股慣例）
+    const arrow=g>=0?'↑':'↓';
+    return`<td class="num nhi ${cls}">${arrow} ${Math.abs(g).toFixed(1)}%</td>`;
+  };
+  body.innerHTML=YEARS.filter(y=>S.summaryTotYears[y]).map(y=>{
+    const v=yearTotals[y];
+    const prev=yearTotals[y-1];
+    const cells=activeMetrics.map(o=>{
+      const val=v[o.k];
+      const vLbl=val?Math.round(val).toLocaleString():'—';
+      return`<td class="num nhi">${vLbl}</td>${yoyTd(val,prev?.[o.k])}`;
+    }).join('');
+    return`<tr><td class="nhi">${y}</td>${cells}</tr>`;
+  }).join('');
+}
+
 function initSummaryMetricBtns(){
   const el=document.getElementById('summary-metric-bar');if(!el)return;
   el.innerHTML='';
@@ -1668,6 +1846,93 @@ function renderSummaryTable(){
       +metricCells
       +`<td class="num nhi">${mv}</td>${yoyTd(r.yearMedia,prev?.media)}`
       +`</tr>`;
+  }).join('');
+  renderSummaryMediaTable();
+}
+function initSummaryMediaYearBar(){
+  const el=document.getElementById('summary-media-yr-bar');if(!el)return;
+  el.innerHTML='';
+  YEARS.forEach(y=>{
+    const b=document.createElement('button');
+    b.className='mini-btn'+(S.summaryMediaYears[y]?' on':'');
+    b.textContent=y;
+    b.onclick=()=>{
+      const active=YEARS.filter(x=>S.summaryMediaYears[x]);
+      if(S.summaryMediaYears[y]&&active.length===1)return;  // keep at least 1 selected
+      S.summaryMediaYears[y]=!S.summaryMediaYears[y];
+      initSummaryMediaYearBar();renderSummaryMediaTable();
+    };
+    el.appendChild(b);
+  });
+  const sep=document.createElement('span');sep.className='vsep';el.appendChild(sep);
+  const allOn=YEARS.every(y=>S.summaryMediaYears[y]);
+  const bt=document.createElement('button');
+  bt.className='mini-btn'+(allOn?' on':'');
+  bt.textContent='全選';
+  bt.onclick=()=>{
+    YEARS.forEach(y=>S.summaryMediaYears[y]=true);
+    initSummaryMediaYearBar();renderSummaryMediaTable();
+  };
+  el.appendChild(bt);
+}
+function initSummaryMediaMonthBar(){
+  const el=document.getElementById('summary-media-month-bar');if(!el)return;
+  el.innerHTML='';
+  wR(1,12).forEach(m=>{
+    const b=document.createElement('button');
+    b.className='mini-btn'+(S.summaryMediaMonths[m]?' on':'');
+    b.textContent=m+'月';
+    b.onclick=()=>{
+      const active=wR(1,12).filter(x=>S.summaryMediaMonths[x]);
+      if(S.summaryMediaMonths[m]&&active.length===1)return;  // keep at least 1 selected
+      S.summaryMediaMonths[m]=!S.summaryMediaMonths[m];
+      initSummaryMediaMonthBar();renderSummaryMediaTable();
+    };
+    el.appendChild(b);
+  });
+  const sep=document.createElement('span');sep.className='vsep';el.appendChild(sep);
+  const allOn=wR(1,12).every(m=>S.summaryMediaMonths[m]);
+  const bt=document.createElement('button');
+  bt.className='mini-btn'+(allOn?' on':'');
+  bt.textContent='全選';
+  bt.onclick=()=>{
+    wR(1,12).forEach(m=>S.summaryMediaMonths[m]=true);
+    initSummaryMediaMonthBar();renderSummaryMediaTable();
+  };
+  el.appendChild(bt);
+}
+function renderSummaryMediaTable(){
+  const head=document.getElementById('summary-tbl-media-head');
+  const body=document.getElementById('summary-tbl-media-body');
+  if(!head||!body)return;
+  const months=wR(1,12).filter(m=>S.summaryMediaMonths[m]);
+  const monthFiltered=months.length<12;
+  const totalLbl=monthFiltered?'所選':'全年';
+  head.innerHTML='<th>年度</th>'+months.map(m=>`<th class="num">${m}月</th>`).join('')+`<th class="num nhi">${totalLbl}媒體費</th><th class="num nhi">較前一年</th>`;
+  const yearTotals={};
+  const rows=YEARS.map(y=>{
+    let yearMedia=0;
+    const cells=months.map(m=>{
+      const md=gMediaMo('MUHI',y,String(m));
+      const v=md?md.tot:0;
+      yearMedia+=v;
+      if(!v)return`<td class="num" style="color:var(--text3)">—</td>`;
+      return`<td class="num nhi">${Math.round(v).toLocaleString()}</td>`;
+    }).join('');
+    yearTotals[y]=yearMedia;
+    return{y,cells,yearMedia};
+  });
+  const yoyTd=(cur,prev)=>{
+    if(!prev||cur===0)return`<td class="num" style="color:var(--text3)">—</td>`;
+    const g=(cur-prev)/prev*100;
+    const cls=g>=0?'dn':'up';  // red=成長, green=下滑（台股慣例）
+    const arrow=g>=0?'↑':'↓';
+    return`<td class="num nhi ${cls}">${arrow} ${Math.abs(g).toFixed(1)}%</td>`;
+  };
+  body.innerHTML=rows.filter(r=>S.summaryMediaYears[r.y]).map(r=>{
+    const prev=yearTotals[r.y-1];
+    const mv=r.yearMedia?Math.round(r.yearMedia).toLocaleString():'—';
+    return`<tr><td class="nhi">${r.y}</td>${r.cells}<td class="num nhi">${mv}</td>${yoyTd(r.yearMedia,prev)}</tr>`;
   }).join('');
 }
 
@@ -1915,11 +2180,19 @@ initSummarySkuBtns();
 initSummaryMetricBtns();
 initSummaryTblYearBar();
 initSummaryMonthBar();
+initSummaryMediaYearBar();
+initSummaryMediaMonthBar();
+initSummaryTotYearBar();
+initSummaryTotMonthBar();
+initSummaryTotSkuBtns();
+initSummaryTotMetricBtns();
 initSummaryChartYrBar();
 initSummaryChartMetricBar();
 initSummaryChartSkuBar();
 initSummarySingleYrBar();
 renderSummaryTable();
+renderSummaryMediaTable();
+renderSummaryTotTable();
 renderSummaryChart();
 renderSummarySingleTable();
 renderBossSummary();
